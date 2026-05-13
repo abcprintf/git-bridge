@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog notes
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # ดึง section ของ version นี้จาก CHANGELOG.md
+          NOTES=$(awk "/^## \[${VERSION}\]/,/^## \[/" CHANGELOG.md \
+            | head -n -1 \
+            | sed '/^## \[/d')
+          # ส่งออกแบบ multiline
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false
+
+      - name: Update docs/github-releases.md
+        run: |
+          VERSION="${{ github.ref_name }}"
+          DATE=$(date +%Y-%m-%d)
+          NOTES="${{ steps.changelog.outputs.notes }}"
+          REPO="${{ github.repository }}"
+
+          ENTRY="## ${VERSION} — ${DATE}\n\n${NOTES}\n\n[View Release](https://github.com/${REPO}/releases/tag/${VERSION})\n\n---\n"
+
+          # prepend หลัง header บรรทัดแรก
+          if grep -q "^## " docs/github-releases.md; then
+            HEADER=$(head -n 1 docs/github-releases.md)
+            REST=$(tail -n +2 docs/github-releases.md)
+            printf "%s\n\n%b%s" "$HEADER" "$ENTRY" "$REST" > docs/github-releases.md
+          else
+            printf "%b" "$ENTRY" >> docs/github-releases.md
+          fi
+
+      - name: Commit updated docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/github-releases.md
+          git diff --cached --quiet || git commit -m "docs: update github-releases.md for ${{ github.ref_name }}"
+          git push origin HEAD:main
