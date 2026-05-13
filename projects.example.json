@@ -2,7 +2,7 @@
   {
     "mantis_project_id": 1,
     "provider": "gitlab",
-    "gitlab_url": "https://gitlab.igenco.dev",
+    "gitlab_url": "https://gitlab.example.com",
     "gitlab_token": "glpat-xxxxxxxxxxxxxxxxxxxx",
     "gitlab_project_id": "123",
     "base_branch": "main"
@@ -10,7 +10,7 @@
   {
     "mantis_project_id": 2,
     "provider": "gitlab",
-    "gitlab_url": "https://gitlab.igenco.dev",
+    "gitlab_url": "https://gitlab.example.com",
     "gitlab_token": "glpat-xxxxxxxxxxxxxxxxxxxx",
     "gitlab_project_id": "456",
     "base_branch": "develop"
@@ -19,16 +19,16 @@
     "mantis_project_id": 3,
     "provider": "github",
     "github_token": "github_pat_xxxxxxxxxxxxxxxxxxxx",
-    "github_owner": "igenco",
+    "github_owner": "abcprintf",
     "github_repo": "project-c",
     "base_branch": "main"
   },
   {
     "mantis_project_id": 4,
     "provider": "github",
-    "github_api_url": "https://github.igenco.dev/api/v3",
+    "github_api_url": "https://github.example.com/api/v3",
     "github_token": "github_pat_xxxxxxxxxxxxxxxxxxxx",
-    "github_owner": "igenco",
+    "github_owner": "abcprintf",
     "github_repo": "project-d",
     "base_branch": "main"
   }

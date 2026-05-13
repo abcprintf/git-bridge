@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/igenco/git-bridge/internal/config"
-	"github.com/igenco/git-bridge/internal/handler"
-	"github.com/igenco/git-bridge/internal/middleware"
-	"github.com/igenco/git-bridge/internal/provider"
+	"github.com/abcprintf/git-bridge/internal/config"
+	"github.com/abcprintf/git-bridge/internal/handler"
+	"github.com/abcprintf/git-bridge/internal/middleware"
+	"github.com/abcprintf/git-bridge/internal/provider"
 )
 
 func main() {

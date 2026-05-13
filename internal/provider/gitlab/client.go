@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/igenco/git-bridge/internal/provider"
+	"github.com/abcprintf/git-bridge/internal/provider"
 )
 
 type Client struct {
@@ -70,8 +70,8 @@ func (c *Client) CreateBranch(branchName, ref string) (*provider.Branch, bool, e
 	case http.StatusCreated:
 		var b glBranch
 		json.Unmarshal(respBody, &b)
-		// GitLab WebURL: https://gitlab.igenco.dev/group/project/-/tree/branch
-		// RepoURL:       https://gitlab.igenco.dev/group/project
+		// GitLab WebURL: https://gitlab.example.com/group/project/-/tree/branch
+		// RepoURL:       https://gitlab.example.com/group/project
 		repoURL := repoURLFromGitLab(b.WebURL, b.Name)
 		return &provider.Branch{Name: b.Name, WebURL: b.WebURL, RepoURL: repoURL}, false, nil
 
@@ -96,7 +96,7 @@ func (c *Client) CreateBranch(branchName, ref string) (*provider.Branch, bool, e
 }
 
 // repoURLFromGitLab ตัด "/-/tree/<branch>" ออกจาก GitLab web URL
-// https://gitlab.igenco.dev/group/project/-/tree/issue/42 → https://gitlab.igenco.dev/group/project
+// https://gitlab.example.com/group/project/-/tree/issue/42 → https://gitlab.example.com/group/project
 func repoURLFromGitLab(webURL, branchName string) string {
 	suffix := "/-/tree/" + branchName
 	if idx := strings.LastIndex(webURL, suffix); idx >= 0 {

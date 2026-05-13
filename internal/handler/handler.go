@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/igenco/git-bridge/internal/config"
-	"github.com/igenco/git-bridge/internal/provider"
+	"github.com/abcprintf/git-bridge/internal/config"
+	"github.com/abcprintf/git-bridge/internal/provider"
 )
 
 type Handler struct {

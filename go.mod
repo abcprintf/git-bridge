@@ -1,3 +1,3 @@
-module github.com/igenco/git-bridge
+module github.com/abcprintf/git-bridge
 
 go 1.22

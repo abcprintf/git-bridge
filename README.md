@@ -42,7 +42,7 @@ MantisBT
   {
     "mantis_project_id": 1,
     "provider": "gitlab",
-    "gitlab_url": "https://gitlab.igenco.dev",
+    "gitlab_url": "https://gitlab.example.com",
     "gitlab_token": "glpat-xxx",
     "gitlab_project_id": "123",
     "base_branch": "main"
@@ -51,7 +51,7 @@ MantisBT
     "mantis_project_id": 2,
     "provider": "github",
     "github_token": "github_pat_xxx",
-    "github_owner": "igenco",
+    "github_owner": "abcprintf",
     "github_repo": "project-b",
     "base_branch": "develop"
   }
@@ -86,7 +86,7 @@ cp projects.example.json projects.json
 
 ```bash
 docker compose up -d
-curl https://bridge.igenco.dev/health
+curl https://bridge.example.com/health
 # {"status":"ok","projects":2}
 ```
 
@@ -98,7 +98,7 @@ curl https://bridge.igenco.dev/health
 
 ```
 Admin → Plugins → Webhook → Configure
-URL:    https://bridge.igenco.dev/mantis-webhook
+URL:    https://bridge.example.com/mantis-webhook
 Events: issue_updated, issue_assigned
 Secret: <ค่าเดียวกับ WEBHOOK_SECRET>
 ```

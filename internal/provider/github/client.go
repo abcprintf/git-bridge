@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/igenco/git-bridge/internal/provider"
+	"github.com/abcprintf/git-bridge/internal/provider"
 )
 
 // Client รองรับทั้ง github.com และ GitHub Enterprise (GHES)
 type Client struct {
-	baseURL string // "https://api.github.com" หรือ "https://github.igenco.dev/api/v3"
+	baseURL string // "https://api.github.com" หรือ "https://github.example.com/api/v3"
 	token   string // Personal Access Token หรือ Fine-grained token
 	owner   string // org หรือ username
 	repo    string // repository name

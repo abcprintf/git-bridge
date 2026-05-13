@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/igenco/git-bridge/internal/config"
-	"github.com/igenco/git-bridge/internal/provider/github"
-	"github.com/igenco/git-bridge/internal/provider/gitlab"
+	"github.com/abcprintf/git-bridge/internal/config"
+	"github.com/abcprintf/git-bridge/internal/provider/github"
+	"github.com/abcprintf/git-bridge/internal/provider/gitlab"
 )
 
 // NewFromProjectConfig สร้าง Provider จาก ProjectConfig
