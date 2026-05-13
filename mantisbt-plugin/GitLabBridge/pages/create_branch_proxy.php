@@ -1,20 +1,18 @@
 <?php
 /**
  * GitLabBridge — Server-side proxy
- * Browser เรียก endpoint นี้ → PHP ส่ง request ไป git-bridge พร้อม token
- * Token ไม่เคยโผล่ใน browser
+ * รับ branch_name จาก modal (user อาจแก้ชื่อเอง)
  */
+access_ensure_bug_level( VIEWER, gpc_get_int( 'bug_id' ) );
 
-// MantisBT จัดการ auth ก่อน — ถ้าไม่ login จะ redirect อัตโนมัติ
-$bug_id = gpc_get_int( 'bug_id', 0 );
+$bug_id      = gpc_get_int( 'bug_id', 0 );
+$branch_name = gpc_get_string( 'branch_name', '' ); // ถ้าส่งมา ใช้เลย, ถ้าไม่มี bridge จะ generate เอง
+
 if ( $bug_id <= 0 ) {
     http_response_code( 400 );
     echo json_encode( ['error' => 'missing bug_id'] );
     exit;
 }
-
-// ตรวจสิทธิ์: ต้องมีสิทธิ์อ่าน issue นั้นอย่างน้อย
-access_ensure_bug_level( VIEWER, $bug_id );
 
 $bug        = bug_get( $bug_id );
 $bridge_url = plugin_config_get( 'bridge_url' );
@@ -28,13 +26,20 @@ if ( empty( $bridge_url ) || empty( $api_token ) ) {
     exit;
 }
 
-$payload = json_encode([
-    'issue_id'   => (int) $bug_id,
-    'project_id' => (int) $bug->project_id,
-    'summary'    => $bug->summary,
-]);
+// Validate branch_name ถ้ามีการส่งมา
+if ( $branch_name !== '' && !preg_match( '/^[\w\-\/\.]+$/', $branch_name ) ) {
+    http_response_code( 400 );
+    echo json_encode( ['error' => 'invalid branch name'] );
+    exit;
+}
 
-// Server-side HTTP call — token อยู่ใน header ฝั่ง server เท่านั้น
+$payload = json_encode( array_filter([
+    'issue_id'    => (int) $bug_id,
+    'project_id'  => (int) $bug->project_id,
+    'summary'     => $bug->summary,
+    'branch_name' => $branch_name ?: null, // null = ให้ bridge generate เอง
+]) );
+
 $ctx = stream_context_create([
     'http' => [
         'method'        => 'POST',
@@ -44,7 +49,7 @@ $ctx = stream_context_create([
         ]),
         'content'       => $payload,
         'timeout'       => 10,
-        'ignore_errors' => true, // ให้อ่าน response body แม้ status 4xx/5xx
+        'ignore_errors' => true,
     ],
 ]);
 
@@ -56,7 +61,6 @@ if ( $result === false ) {
     exit;
 }
 
-// Forward HTTP status code จาก bridge service
 $status_line = $http_response_header[0] ?? '';
 if ( preg_match( '/HTTP\/\d\.\d\s+(\d+)/', $status_line, $m ) ) {
     http_response_code( (int) $m[1] );

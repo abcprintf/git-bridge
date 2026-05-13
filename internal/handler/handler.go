@@ -80,14 +80,15 @@ func (h *Handler) MantisWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.doCreateBranch(w, issue.Project.ID, issue.ID, issue.Summary, "webhook")
+	h.doCreateBranch(w, issue.Project.ID, issue.ID, issue.Summary, "", "webhook")
 }
 
 // POST /create-branch
 type createBranchRequest struct {
-	IssueID   int    `json:"issue_id"`
-	ProjectID int    `json:"project_id"`
-	Summary   string `json:"summary"`
+	IssueID    int    `json:"issue_id"`
+	ProjectID  int    `json:"project_id"`
+	Summary    string `json:"summary"`
+	BranchName string `json:"branch_name,omitempty"` // optional — ถ้าส่งมาใช้เลย ไม่ต้อง generate
 }
 
 func (h *Handler) CreateBranch(w http.ResponseWriter, r *http.Request) {
@@ -105,14 +106,14 @@ func (h *Handler) CreateBranch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.doCreateBranch(w, req.ProjectID, req.IssueID, req.Summary, "button")
+	h.doCreateBranch(w, req.ProjectID, req.IssueID, req.Summary, req.BranchName, "button")
 }
 
 // ─────────────────────────────────────────
 // Core logic
 // ─────────────────────────────────────────
 
-func (h *Handler) doCreateBranch(w http.ResponseWriter, projectID, issueID int, summary, source string) {
+func (h *Handler) doCreateBranch(w http.ResponseWriter, projectID, issueID int, summary, customBranch, source string) {
 	p, ok := h.providers[projectID]
 	if !ok {
 		log.Printf("[%s] mantis project_id=%d not found in project map", source, projectID)
@@ -126,7 +127,11 @@ func (h *Handler) doCreateBranch(w http.ResponseWriter, projectID, issueID int, 
 	}
 
 	baseBranch := h.baseBranches[projectID]
-	branchName := buildBranchName(issueID, summary)
+	// ถ้า user กำหนด branch name เองจาก modal → ใช้เลย, ไม่ต้อง generate
+	branchName := customBranch
+	if branchName == "" {
+		branchName = buildBranchName(issueID, summary)
+	}
 
 	branch, alreadyExists, err := p.CreateBranch(branchName, baseBranch)
 	if err != nil {
