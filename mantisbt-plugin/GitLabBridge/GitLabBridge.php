@@ -52,8 +52,11 @@ class GitLabBridgePlugin extends MantisPlugin {
         }
         ?>
 
-        <!-- Widget box — EVENT_VIEW_BUG_EXTRA renders OUTSIDE the bug table, same as Time Tracking -->
-        <div class="col-md-12 col-xs-12 noprint">
+        <!-- Widget box — ซ่อนก่อน JS จะเช็ค project config -->
+        <div id="glb-widget-<?php echo $bug_id ?>"
+             class="col-md-12 col-xs-12 noprint"
+             data-check-url="<?php echo htmlspecialchars( plugin_page( 'project_status', true ) . '&bug_id=' . $bug_id, ENT_QUOTES ) ?>"
+             style="display:none">
             <div class="space-10"></div>
             <div class="widget-box widget-color-blue2">
                 <div class="widget-header widget-header-small">

@@ -9,7 +9,30 @@
 
     function $(id) { return document.getElementById(id); }
 
-    function openModal(bugId, proxyUrl, checkUrl, slug) {
+    // ─── Check project config on page load ────────────────────────────────────
+    // ซ่อน widget ไว้ก่อน แล้วแสดงเฉพาะเมื่อ project มี config ใน bridge
+
+    function initWidgets() {
+        var widgets = document.querySelectorAll('[id^="glb-widget-"]');
+        widgets.forEach(function (widget) {
+            var checkUrl = widget.dataset.checkUrl;
+            if (!checkUrl) return;
+
+            fetch(checkUrl)
+                .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
+                .then(function (r) {
+                    if (r.ok && r.data.configured) {
+                        widget.style.display = 'block'; // แสดง widget
+                    }
+                    // ถ้าไม่ configured → ซ่อนต่อ (ไม่ต้อง render อะไร)
+                })
+                .catch(function () {
+                    // bridge unreachable → ซ่อนต่อ (ไม่ spam error ใส่ user)
+                });
+        });
+    }
+
+    function openModal(bugId, proxyUrl, slug) {
         var modal = $('glb-modal-' + bugId);
         if (!modal) return;
 
@@ -25,45 +48,15 @@
         var form    = $('glb-form-'    + bugId);
         var status  = $('glb-status-'  + bugId);
 
-        // Show modal immediately with loading state
-        confirm.disabled = true;
-        confirm.textContent = '⏳ กำลังเช็ค...';
-        if (form)   form.style.display   = 'none';
-        if (status) status.style.display = 'block';
-        if (status) status.innerHTML     = '<span style="color:#888">⏳ กำลังตรวจสอบ config...</span>';
-        modal.style.display = 'flex';
+        // form แสดงเลย (check ผ่านแล้วตั้งแต่ page load)
+        if (status) status.style.display = 'none';
+        if (form)   form.style.display   = 'block';
+        confirm.disabled    = false;
+        confirm.textContent = 'สร้าง Branch';
+        confirm.style.display = '';
 
-        // Check project config
-        fetch(checkUrl)
-            .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
-            .then(function (r) {
-                if (r.ok && r.data.configured) {
-                    // Config OK — show form
-                    if (status) status.style.display = 'none';
-                    if (form)   form.style.display   = 'block';
-                    confirm.disabled    = false;
-                    confirm.textContent = 'สร้าง Branch';
-                    updatePreview(bugId, slug);
-                } else {
-                    // Not configured
-                    var errMsg = (r.data && r.data.error) ? r.data.error : 'project นี้ยังไม่ได้ตั้งค่า';
-                    if (status) {
-                        status.innerHTML = ''
-                            + '<div style="padding:12px 0">'
-                            + '  <div style="font-size:20px;margin-bottom:8px">⚠️</div>'
-                            + '  <div style="font-weight:600;margin-bottom:6px">Project ยังไม่ได้ config</div>'
-                            + '  <div style="font-size:12px;color:#888;font-family:monospace;background:#f5f5f5;padding:8px;border-radius:4px">' + errMsg + '</div>'
-                            + '  <div style="font-size:12px;color:#666;margin-top:8px">กรุณาแจ้ง Admin เพื่อเพิ่ม mapping ใน <code>projects.json</code></div>'
-                            + '</div>';
-                    }
-                    confirm.style.display = 'none';
-                }
-            })
-            .catch(function () {
-                if (status) status.innerHTML = '❌ เชื่อมต่อ bridge ไม่ได้ กรุณาตรวจสอบ service';
-                confirm.disabled    = false;
-                confirm.textContent = 'สร้าง Branch';
-            });
+        updatePreview(bugId, slug);
+        modal.style.display = 'flex';
     }
 
     function closeModal(bugId) {
@@ -176,9 +169,8 @@
         if (openBtn) {
             var bugId    = openBtn.dataset.bugId;
             var proxyUrl = openBtn.dataset.proxyUrl;
-            var checkUrl = openBtn.dataset.checkUrl;
             var slug     = openBtn.dataset.slug;
-            openModal(bugId, proxyUrl, checkUrl, slug);
+            openModal(bugId, proxyUrl, slug);
             return;
         }
 
@@ -250,5 +242,12 @@
             }
         });
     });
+
+    // ─── Init: check project config on page load ───────────────────────────
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWidgets);
+    } else {
+        initWidgets(); // DOM already ready
+    }
 
 })();
