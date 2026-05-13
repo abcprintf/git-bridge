@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [1.2.2] — 2026-05-13
+
+### Fixed
+- **Thai branch names** — `slugify()` รองรับ Unicode combining marks (`\p{M}`) ทำให้ vowel/tone marks ของภาษาไทย (เช่น `้`, `ั`, `็`) ไม่หายไปใน branch name อีกต่อไป
+- **Branch name truncation** — backtrack ไปหา word boundary เฉพาะเมื่อตัดกลางคำ (ไม่ตัดทิ้งหากตรง word boundary พอดี)
+- **`GET /project-status`** — validate `mantis_project_id` ก่อน query: return 400 หาก missing หรือไม่ใช่ positive integer (เดิม return 404 แบบงง)
+
+### Added
+- Unit tests: `handler` (slugify, buildBranchName, isTriggerStatus), `middleware` (ValidateHMAC, ValidateAPIToken), `provider/gitlab`, `provider/github`
+- CI: GitHub Actions workflow สร้าง release อัตโนมัติเมื่อ push tag (`v*.*.*`)
+- `CLAUDE.md` สำหรับ Claude Code project context
+
+---
+
 ## [1.2.0] — 2025-05-13
 
 ### Added
@@ -56,6 +70,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 - **Docker Compose** deployment
 - **`GET /health`** endpoint
 
+[1.2.2]: https://github.com/abcprintf/git-bridge/releases/tag/v1.2.2
+[1.2.1]: https://github.com/abcprintf/git-bridge/releases/tag/v1.2.1
 [1.2.0]: https://github.com/abcprintf/git-bridge/releases/tag/v1.2.0
 [1.1.0]: https://github.com/abcprintf/git-bridge/releases/tag/v1.1.0
 [1.0.0]: https://github.com/abcprintf/git-bridge/releases/tag/v1.0.0
