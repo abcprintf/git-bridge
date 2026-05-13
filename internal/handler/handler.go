@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/abcprintf/git-bridge/internal/config"
 	"github.com/abcprintf/git-bridge/internal/provider"
@@ -86,8 +85,15 @@ func (h *Handler) MantisWebhook(w http.ResponseWriter, r *http.Request) {
 // GET /project-status?mantis_project_id=<id>
 func (h *Handler) ProjectStatus(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("mantis_project_id")
+	if idStr == "" {
+		jsonError(w, "mantis_project_id is required", http.StatusBadRequest)
+		return
+	}
 	var projectID int
-	fmt.Sscan(idStr, &projectID)
+	if _, err := fmt.Sscan(idStr, &projectID); err != nil || projectID <= 0 {
+		jsonError(w, "mantis_project_id must be a positive integer", http.StatusBadRequest)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -196,7 +202,9 @@ func (h *Handler) doCreateBranch(w http.ResponseWriter, projectID, issueID int, 
 // Helpers
 // ─────────────────────────────────────────
 
-var nonAlphanumRe = regexp.MustCompile(`[^a-z0-9]+`)
+// invalidBranchCharRe matches characters not allowed in branch names.
+// \p{L} = Unicode letters, \p{M} = combining marks (Thai vowels/tone marks), \p{N} = digits
+var invalidBranchCharRe = regexp.MustCompile(`[^\p{L}\p{M}\p{N}]+`)
 
 func buildBranchName(issueID int, summary string) string {
 	slug := slugify(summary)
@@ -207,18 +215,17 @@ func buildBranchName(issueID int, summary string) string {
 }
 
 func slugify(s string) string {
-	var b strings.Builder
-	for _, r := range strings.ToLower(s) {
-		if r < unicode.MaxASCII {
-			b.WriteRune(r)
-		}
-	}
-	result := nonAlphanumRe.ReplaceAllString(b.String(), "-")
+	s = strings.ToLower(strings.TrimSpace(s))
+	result := invalidBranchCharRe.ReplaceAllString(s, "-")
 	result = strings.Trim(result, "-")
-	if len(result) > 50 {
-		result = result[:50]
-		if idx := strings.LastIndex(result, "-"); idx > 20 {
-			result = result[:idx]
+	runes := []rune(result)
+	if len(runes) > 50 {
+		result = string(runes[:50])
+		// backtrack to last word boundary only when we cut mid-word
+		if runes[50] != '-' {
+			if idx := strings.LastIndexByte(result, '-'); idx > 20 {
+				result = result[:idx]
+			}
 		}
 	}
 	return result
