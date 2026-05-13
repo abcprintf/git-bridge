@@ -52,32 +52,36 @@ class GitLabBridgePlugin extends MantisPlugin {
         }
         ?>
 
-        <!-- Section header — match MantisBT style -->
-        <tr>
-            <td class="form-title" colspan="2">
-                <span style="display:flex;align-items:center;gap:6px">
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="opacity:.85;flex-shrink:0">
-                        <path d="M15.698 7.287 8.712.302a1.03 1.03 0 0 0-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 0 1 1.55 1.56l1.773 1.774a1.224 1.224 0 0 1 1.267 2.025 1.226 1.226 0 0 1-2.002-1.334L8.58 5.963v4.353a1.226 1.226 0 1 1-1.008-.036V5.887a1.226 1.226 0 0 1-.666-1.608L5.093 2.44 .302 7.288a1.03 1.03 0 0 0 0 1.457l6.986 6.986a1.03 1.03 0 0 0 1.457 0l6.953-6.986a1.03 1.03 0 0 0 0-1.457"/>
-                    </svg>
-                    Git Branch
-                </span>
-            </td>
-        </tr>
+        <!-- Widget box — EVENT_VIEW_BUG_EXTRA renders OUTSIDE the bug table, same as Time Tracking -->
+        <div class="col-md-12 col-xs-12 noprint">
+            <div class="space-10"></div>
+            <div class="widget-box widget-color-blue2">
+                <div class="widget-header widget-header-small">
+                    <h4 class="widget-title lighter">
+                        <i class="ace-icon fa fa-code-fork"></i>
+                        <?php echo plugin_lang_get( 'title' ) ?>
+                    </h4>
+                    <div class="widget-toolbar">
+                        <a data-action="collapse" href="#">
+                            <i class="ace-icon fa fa-chevron-up bigger-125"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="widget-body">
+                    <div class="widget-main" style="padding:10px 16px">
+                        <button class="btn btn-sm btn-primary glb-open-btn"
+                                data-bug-id="<?php echo $bug_id ?>"
+                                data-proxy-url="<?php echo htmlspecialchars( $proxy_url, ENT_QUOTES ) ?>"
+                                data-slug="<?php echo htmlspecialchars( $slug, ENT_QUOTES ) ?>">
+                            <i class="ace-icon fa fa-code-fork"></i>
+                            <?php echo plugin_lang_get( 'create_branch' ) ?>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <!-- Button row — ส่ง data ผ่าน data-* attrs (ไม่ต้องใช้ inline script) -->
-        <tr>
-            <td class="category"><?php echo plugin_lang_get( 'title' ) ?></td>
-            <td>
-                <button class="btn btn-sm btn-primary glb-open-btn"
-                        data-bug-id="<?php echo $bug_id ?>"
-                        data-proxy-url="<?php echo htmlspecialchars( $proxy_url, ENT_QUOTES ) ?>"
-                        data-slug="<?php echo htmlspecialchars( $slug, ENT_QUOTES ) ?>">
-                    🔀 <?php echo plugin_lang_get( 'create_branch' ) ?>
-                </button>
-            </td>
-        </tr>
-
-        <!-- Modal (hidden) — ข้อมูล bug อยู่ใน data attrs ของ button แล้ว -->
+        <!-- Modal overlay (position:fixed, ไม่กระทบ table layout) -->
         <div id="glb-modal-<?php echo $bug_id ?>"
              data-bug-id="<?php echo $bug_id ?>"
              style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
