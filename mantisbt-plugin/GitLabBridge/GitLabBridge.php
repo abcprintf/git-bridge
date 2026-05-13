@@ -26,7 +26,7 @@ class GitLabBridgePlugin extends MantisPlugin {
 
     function hooks() {
         return [
-            'EVENT_DISPLAY_BUG_DETAILS' => 'render_create_branch_row',
+            'EVENT_VIEW_BUG_EXTRA' => 'render_create_branch_row',
         ];
     }
 
