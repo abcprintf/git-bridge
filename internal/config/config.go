@@ -8,57 +8,22 @@ import (
 
 type Config struct {
 	Port            string
-	BaseBranch      string
-	TriggerStatuses []string
 	WebhookSecret   string
 	APIToken        string
-
-	// Provider: "gitlab" หรือ "github"
-	Provider string
-
-	// GitLab
-	GitLabURL       string
-	GitLabToken     string
-	GitLabProjectID string
-
-	// GitHub / GitHub Enterprise
-	GitHubAPIURL string // "https://api.github.com" หรือ GHES URL
-	GitHubToken  string
-	GitHubOwner  string // org หรือ username
-	GitHubRepo   string
+	TriggerStatuses []string
+	ProjectsFile    string // path ของ projects.json
 }
 
 func Load() *Config {
-	p := strings.ToLower(getEnv("GIT_PROVIDER", "gitlab"))
-	if p != "gitlab" && p != "github" {
-		log.Fatalf("[config] GIT_PROVIDER must be 'gitlab' or 'github', got %q", p)
-	}
-
-	cfg := &Config{
-		Port:       getEnv("PORT", "8080"),
-		Provider:   p,
-		BaseBranch: getEnv("BASE_BRANCH", "main"),
+	return &Config{
+		Port:          getEnv("PORT", "8080"),
+		WebhookSecret: requireEnv("WEBHOOK_SECRET"),
+		APIToken:      requireEnv("API_TOKEN"),
 		TriggerStatuses: splitTrim(
 			getEnv("TRIGGER_STATUSES", "assigned,in progress"),
 		),
-		WebhookSecret: requireEnv("WEBHOOK_SECRET"),
-		APIToken:      requireEnv("API_TOKEN"),
+		ProjectsFile: getEnv("PROJECTS_FILE", "/etc/git-bridge/projects.json"),
 	}
-
-	switch p {
-	case "gitlab":
-		cfg.GitLabURL       = requireEnv("GITLAB_URL")
-		cfg.GitLabToken     = requireEnv("GITLAB_TOKEN")
-		cfg.GitLabProjectID = requireEnv("GITLAB_PROJECT_ID")
-
-	case "github":
-		cfg.GitHubAPIURL = getEnv("GITHUB_API_URL", "https://api.github.com")
-		cfg.GitHubToken  = requireEnv("GITHUB_TOKEN")
-		cfg.GitHubOwner  = requireEnv("GITHUB_OWNER")
-		cfg.GitHubRepo   = requireEnv("GITHUB_REPO")
-	}
-
-	return cfg
 }
 
 func getEnv(key, fallback string) string {

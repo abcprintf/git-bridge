@@ -1,7 +1,7 @@
 # git-bridge
 
 Go microservice — MantisBT → GitLab / GitHub  
-Auto-create branch เมื่อ issue ถูก assign หรือกดปุ่มใน MantisBT
+รองรับหลายโครงการ: แต่ละ MantisBT project map ไปยัง Git repo คนละตัวได้
 
 ---
 
@@ -23,12 +23,44 @@ MantisBT
   └── Button (manual) ─→ POST /create-branch  ──┤
                                                  ↓
                                           git-bridge (Go)
-                                          provider interface
-                                           ├── GitLab client
-                                           └── GitHub client
+                                          lookup projects.json
+                                           ├── project 1 → GitLab 123
+                                           ├── project 2 → GitLab 456
+                                           └── project 3 → GitHub org/repo
                                                  ↓
                                         branch: issue/{id}-{slug}
 ```
+
+---
+
+## Project Mapping (projects.json)
+
+แต่ละ entry map `mantis_project_id` → Git repo:
+
+```json
+[
+  {
+    "mantis_project_id": 1,
+    "provider": "gitlab",
+    "gitlab_url": "https://gitlab.igenco.dev",
+    "gitlab_token": "glpat-xxx",
+    "gitlab_project_id": "123",
+    "base_branch": "main"
+  },
+  {
+    "mantis_project_id": 2,
+    "provider": "github",
+    "github_token": "github_pat_xxx",
+    "github_owner": "igenco",
+    "github_repo": "project-b",
+    "base_branch": "develop"
+  }
+]
+```
+
+> ⚠️ `projects.json` มี token — อยู่ใน `.gitignore` ห้าม commit
+
+ดู `projects.example.json` สำหรับ template ทุก provider
 
 ---
 
@@ -38,31 +70,24 @@ MantisBT
 
 ```bash
 cp .env.example .env
+cp projects.example.json projects.json
+# แก้ค่าใน .env และ projects.json
 ```
 
-**GitLab:**
-```env
-GIT_PROVIDER=gitlab
-GITLAB_URL=https://gitlab.igenco.dev
-GITLAB_TOKEN=glpat-xxx      # Project Access Token, scope: write_repository
-GITLAB_PROJECT_ID=123
-```
+### 2. Token Permissions
 
-**GitHub:**
-```env
-GIT_PROVIDER=github
-GITHUB_TOKEN=github_pat_xxx  # Fine-grained token, Permission: Contents → Read and write
-GITHUB_OWNER=igenco
-GITHUB_REPO=my-repo
-# GITHUB_API_URL=https://github.igenco.dev/api/v3  # GHES เท่านั้น
-```
+| Provider | Token Type | Required Scope |
+|----------|-----------|----------------|
+| GitLab | Project Access Token | `write_repository` |
+| GitHub | Fine-grained PAT | `Contents: Read and write` |
+| GitHub | Classic PAT | `repo` |
 
-### 2. Deploy
+### 3. Deploy
 
 ```bash
 docker compose up -d
 curl https://bridge.igenco.dev/health
-# {"status":"ok","provider":"gitlab"}
+# {"status":"ok","projects":2}
 ```
 
 ---
@@ -100,22 +125,12 @@ issue/7          ← ถ้าไม่มี summary
 
 ---
 
-## Token Permissions
-
-| Provider | Token Type | Required Scope |
-|----------|-----------|----------------|
-| GitLab | Project Access Token | `write_repository` |
-| GitHub | Fine-grained PAT | `Contents: Read and write` |
-| GitHub | Classic PAT | `repo` |
-
----
-
 ## Security
 
-- Webhook: HMAC-SHA256 validation (`X-Hub-Signature-256`)
-- Button API: constant-time token comparison (`X-Api-Token`)
-- ควร deploy ใน internal network + Nginx/Traefik reverse proxy พร้อม TLS
-- ไม่ควร expose port 8080 ตรงๆ
+- Webhook: HMAC-SHA256 (`X-Hub-Signature-256`)
+- Button API: constant-time token compare (`X-Api-Token`)
+- PHP plugin ส่ง request server-side — token ไม่โผล่ใน browser
+- `projects.json` อยู่นอก git, mount ผ่าน docker volume
 
 ---
 
@@ -125,19 +140,28 @@ issue/7          ← ถ้าไม่มี summary
 git-bridge/
 ├── cmd/main.go
 ├── internal/
-│   ├── config/config.go
-│   ├── handler/handler.go
+│   ├── config/
+│   │   ├── config.go        ← env config
+│   │   └── projects.go      ← load projects.json
+│   ├── handler/handler.go   ← webhook + button handlers
 │   ├── middleware/middleware.go
 │   └── provider/
-│       ├── provider.go          ← interface
+│       ├── provider.go      ← interface
+│       ├── factory.go       ← build provider from config
 │       ├── gitlab/client.go
 │       └── github/client.go
 ├── mantisbt-plugin/GitLabBridge/
 │   ├── GitLabBridgePlugin.php
-│   ├── lang/strings_english.txt
-│   └── pages/config_page.php
+│   ├── lang/
+│   │   ├── strings_english.txt
+│   │   └── strings_thai.txt
+│   └── pages/
+│       ├── config_page.php
+│       └── create_branch_proxy.php
 ├── Dockerfile
 ├── docker-compose.yml
 ├── go.mod
-└── .env.example
+├── .env.example
+├── .gitignore
+└── projects.example.json    ← template (safe to commit)
 ```

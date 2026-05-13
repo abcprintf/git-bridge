@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,24 +14,30 @@ import (
 	"github.com/igenco/git-bridge/internal/handler"
 	"github.com/igenco/git-bridge/internal/middleware"
 	"github.com/igenco/git-bridge/internal/provider"
-	"github.com/igenco/git-bridge/internal/provider/github"
-	"github.com/igenco/git-bridge/internal/provider/gitlab"
 )
 
 func main() {
 	cfg := config.Load()
 
-	var p provider.Provider
-	switch cfg.Provider {
-	case "gitlab":
-		p = gitlab.NewClient(cfg.GitLabURL, cfg.GitLabToken, cfg.GitLabProjectID)
-	case "github":
-		p = github.NewClient(cfg.GitHubAPIURL, cfg.GitHubToken, cfg.GitHubOwner, cfg.GitHubRepo)
+	// โหลด project mapping จาก projects.json
+	projects, err := config.LoadProjects(cfg.ProjectsFile)
+	if err != nil {
+		log.Fatalf("[git-bridge] load projects: %v", err)
+	}
+	log.Printf("[git-bridge] loaded %d project mapping(s) from %s", len(projects), cfg.ProjectsFile)
+
+	// สร้าง provider map
+	providers, err := provider.BuildProviderMap(projects)
+	if err != nil {
+		log.Fatalf("[git-bridge] build providers: %v", err)
 	}
 
-	log.Printf("[git-bridge] provider=%s", cfg.Provider)
+	// Log สรุป mapping
+	for id, p := range providers {
+		log.Printf("[git-bridge]   mantis project %d → %s", id, p.Name())
+	}
 
-	h := handler.New(p, cfg)
+	h := handler.New(providers, projects, cfg)
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /mantis-webhook",
@@ -41,7 +48,7 @@ func main() {
 	)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok","provider":"` + cfg.Provider + `"}`))
+		w.Write([]byte(`{"status":"ok","projects":` + itoa(len(projects)) + `}`))
 	})
 
 	srv := &http.Server{
@@ -67,4 +74,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
+}
+
+func itoa(n int) string {
+	return fmt.Sprintf("%d", n)
 }

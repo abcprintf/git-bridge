@@ -29,8 +29,9 @@ if ( empty( $bridge_url ) || empty( $api_token ) ) {
 }
 
 $payload = json_encode([
-    'issue_id' => (int) $bug_id,
-    'summary'  => $bug->summary,
+    'issue_id'   => (int) $bug_id,
+    'project_id' => (int) $bug->project_id,
+    'summary'    => $bug->summary,
 ]);
 
 // Server-side HTTP call — token อยู่ใน header ฝั่ง server เท่านั้น

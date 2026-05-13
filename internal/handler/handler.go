@@ -14,12 +14,27 @@ import (
 )
 
 type Handler struct {
-	provider provider.Provider
-	cfg      *config.Config
+	// map[mantisProjectID]Provider
+	providers map[int]provider.Provider
+	// map[mantisProjectID]baseBranch
+	baseBranches map[int]string
+	cfg          *config.Config
 }
 
-func New(p provider.Provider, cfg *config.Config) *Handler {
-	return &Handler{provider: p, cfg: cfg}
+func New(
+	providers map[int]provider.Provider,
+	projects map[int]config.ProjectConfig,
+	cfg *config.Config,
+) *Handler {
+	branches := make(map[int]string, len(projects))
+	for id, p := range projects {
+		branches[id] = p.BaseBranch
+	}
+	return &Handler{
+		providers:    providers,
+		baseBranches: branches,
+		cfg:          cfg,
+	}
 }
 
 // ─────────────────────────────────────────
@@ -35,6 +50,9 @@ type mantisIssue struct {
 	Handler *struct {
 		Name string `json:"name"`
 	} `json:"handler"`
+	Project struct {
+		ID int `json:"id"`
+	} `json:"project"`
 }
 
 type mantisWebhookPayload struct {
@@ -57,18 +75,19 @@ func (h *Handler) MantisWebhook(w http.ResponseWriter, r *http.Request) {
 
 	statusLower := strings.ToLower(strings.TrimSpace(issue.Status.Name))
 	if !h.isTriggerStatus(statusLower) {
-		log.Printf("[webhook] issue #%d status=%q — skip", issue.ID, issue.Status.Name)
+		log.Printf("[webhook] issue #%d project=%d status=%q — skip", issue.ID, issue.Project.ID, issue.Status.Name)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	h.doCreateBranch(w, issue.ID, issue.Summary, "webhook")
+	h.doCreateBranch(w, issue.Project.ID, issue.ID, issue.Summary, "webhook")
 }
 
 // POST /create-branch
 type createBranchRequest struct {
-	IssueID int    `json:"issue_id"`
-	Summary string `json:"summary"`
+	IssueID   int    `json:"issue_id"`
+	ProjectID int    `json:"project_id"`
+	Summary   string `json:"summary"`
 }
 
 func (h *Handler) CreateBranch(w http.ResponseWriter, r *http.Request) {
@@ -81,20 +100,37 @@ func (h *Handler) CreateBranch(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "issue_id required", http.StatusBadRequest)
 		return
 	}
+	if req.ProjectID <= 0 {
+		jsonError(w, "project_id required", http.StatusBadRequest)
+		return
+	}
 
-	h.doCreateBranch(w, req.IssueID, req.Summary, "button")
+	h.doCreateBranch(w, req.ProjectID, req.IssueID, req.Summary, "button")
 }
 
 // ─────────────────────────────────────────
-// Core logic — shared ระหว่าง webhook และ button
+// Core logic
 // ─────────────────────────────────────────
 
-func (h *Handler) doCreateBranch(w http.ResponseWriter, issueID int, summary, source string) {
+func (h *Handler) doCreateBranch(w http.ResponseWriter, projectID, issueID int, summary, source string) {
+	p, ok := h.providers[projectID]
+	if !ok {
+		log.Printf("[%s] mantis project_id=%d not found in project map", source, projectID)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(w).Encode(map[string]any{
+			"error":      fmt.Sprintf("mantis project_id=%d is not mapped to any git repo", projectID),
+			"project_id": projectID,
+		})
+		return
+	}
+
+	baseBranch := h.baseBranches[projectID]
 	branchName := buildBranchName(issueID, summary)
 
-	branch, alreadyExists, err := h.provider.CreateBranch(branchName, h.cfg.BaseBranch)
+	branch, alreadyExists, err := p.CreateBranch(branchName, baseBranch)
 	if err != nil {
-		log.Printf("[%s][%s] issue #%d error: %v", source, h.provider.Name(), issueID, err)
+		log.Printf("[%s][%s] project=%d issue #%d error: %v", source, p.Name(), projectID, issueID, err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"error": err.Error()})
@@ -104,23 +140,23 @@ func (h *Handler) doCreateBranch(w http.ResponseWriter, issueID int, summary, so
 	w.Header().Set("Content-Type", "application/json")
 
 	if alreadyExists {
-		log.Printf("[%s][%s] issue #%d branch %q already exists", source, h.provider.Name(), issueID, branchName)
+		log.Printf("[%s][%s] project=%d issue #%d branch %q already exists", source, p.Name(), projectID, issueID, branchName)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]any{
 			"status":      "already_exists",
 			"branch_name": branchName,
-			"provider":    h.provider.Name(),
+			"provider":    p.Name(),
 		})
 		return
 	}
 
-	log.Printf("[%s][%s] issue #%d branch %q created", source, h.provider.Name(), issueID, branch.Name)
+	log.Printf("[%s][%s] project=%d issue #%d branch %q created", source, p.Name(), projectID, issueID, branch.Name)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":      "created",
 		"branch_name": branch.Name,
 		"web_url":     branch.WebURL,
-		"provider":    h.provider.Name(),
+		"provider":    p.Name(),
 	})
 }
 

@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Project mapping (มี token — ห้าม commit)
+projects.json
+
 # Binary
 git-bridge
 
