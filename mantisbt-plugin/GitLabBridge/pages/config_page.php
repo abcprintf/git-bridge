@@ -48,7 +48,7 @@ html_page_top( plugin_lang_get( 'config_title' ) );
         <td>
             <input type="url" name="bridge_url" class="form-control"
                    value="<?php echo string_attribute( $current_url ) ?>"
-                   placeholder="https://bridge.igenco.dev" style="max-width:400px">
+                   placeholder="https://bridge.domain" style="max-width:400px">
             <small class="text-muted">URL ของ git-bridge service (ไม่มี trailing slash)</small>
         </td>
     </tr>
