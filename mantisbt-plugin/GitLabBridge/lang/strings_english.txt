@@ -1,0 +1,8 @@
+<?php
+$s_plugin_GitLabBridge_title          = 'GitLab Branch';
+$s_plugin_GitLabBridge_create_branch  = 'Create Branch';
+$s_plugin_GitLabBridge_config_title   = 'GitLab Bridge Configuration';
+$s_plugin_GitLabBridge_bridge_url     = 'Bridge Service URL';
+$s_plugin_GitLabBridge_api_token      = 'API Token';
+$s_plugin_GitLabBridge_save           = 'Save Configuration';
+$s_plugin_GitLabBridge_saved          = 'Configuration saved.';
