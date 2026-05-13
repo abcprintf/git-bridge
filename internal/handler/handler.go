@@ -83,6 +83,32 @@ func (h *Handler) MantisWebhook(w http.ResponseWriter, r *http.Request) {
 	h.doCreateBranch(w, issue.Project.ID, issue.ID, issue.Summary, "", "webhook")
 }
 
+// GET /project-status?mantis_project_id=<id>
+func (h *Handler) ProjectStatus(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("mantis_project_id")
+	var projectID int
+	fmt.Sscan(idStr, &projectID)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	p, ok := h.providers[projectID]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]any{
+			"configured": false,
+			"project_id": projectID,
+			"error":      fmt.Sprintf("mantis project_id=%d is not mapped to any git repo", projectID),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]any{
+		"configured": true,
+		"project_id": projectID,
+		"provider":   p.Name(),
+	})
+}
+
 // POST /create-branch
 type createBranchRequest struct {
 	IssueID    int    `json:"issue_id"`

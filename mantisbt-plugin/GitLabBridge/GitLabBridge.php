@@ -69,9 +69,11 @@ class GitLabBridgePlugin extends MantisPlugin {
                 </div>
                 <div class="widget-body">
                     <div class="widget-main" style="padding:10px 16px">
+                        <?php $check_url = plugin_page( 'project_status', true ) . '&bug_id=' . $bug_id ?>
                         <button class="btn btn-sm btn-primary glb-open-btn"
                                 data-bug-id="<?php echo $bug_id ?>"
                                 data-proxy-url="<?php echo htmlspecialchars( $proxy_url, ENT_QUOTES ) ?>"
+                                data-check-url="<?php echo htmlspecialchars( $check_url, ENT_QUOTES ) ?>"
                                 data-slug="<?php echo htmlspecialchars( $slug, ENT_QUOTES ) ?>">
                             <i class="ace-icon fa fa-code-fork"></i>
                             <?php echo plugin_lang_get( 'create_branch' ) ?>
@@ -93,6 +95,12 @@ class GitLabBridgePlugin extends MantisPlugin {
                             data-bug-id="<?php echo $bug_id ?>"
                             style="background:none;border:none;font-size:20px;cursor:pointer;color:#666;line-height:1">×</button>
                 </div>
+
+                <!-- Status area: loading / error เมื่อ project ไม่มี config -->
+                <div id="glb-status-<?php echo $bug_id ?>" style="display:none;text-align:center;padding:8px 0"></div>
+
+                <!-- Form: แสดงเมื่อ config OK -->
+                <div id="glb-form-<?php echo $bug_id ?>">
 
                 <div style="margin-bottom:14px">
                     <label style="display:block;font-size:12px;font-weight:600;color:#666;margin-bottom:4px">ISSUE</label>
@@ -126,6 +134,8 @@ class GitLabBridgePlugin extends MantisPlugin {
                         ชื่อ branch ควรใช้แค่ตัวอักษร ตัวเลข และ - / .
                     </div>
                 </div>
+
+                </div><!-- /#glb-form -->
 
                 <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
                     <button class="btn btn-default btn-sm glb-cancel-btn"

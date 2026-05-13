@@ -9,24 +9,61 @@
 
     function $(id) { return document.getElementById(id); }
 
-    function openModal(bugId, proxyUrl, slug) {
+    function openModal(bugId, proxyUrl, checkUrl, slug) {
         var modal = $('glb-modal-' + bugId);
         if (!modal) return;
 
         // reset state
-        modal._proxyUrl  = proxyUrl;
-        modal._slug      = slug;
+        modal._proxyUrl   = proxyUrl;
+        modal._slug       = slug;
         modal._manualEdit = false;
 
         $('glb-result-'  + bugId).style.display = 'none';
         $('glb-checkout-'+ bugId).style.display = 'none';
 
         var confirm = $('glb-confirm-' + bugId);
-        confirm.disabled = false;
-        confirm.textContent = 'สร้าง Branch';
+        var form    = $('glb-form-'    + bugId);
+        var status  = $('glb-status-'  + bugId);
 
-        updatePreview(bugId, slug);
+        // Show modal immediately with loading state
+        confirm.disabled = true;
+        confirm.textContent = '⏳ กำลังเช็ค...';
+        if (form)   form.style.display   = 'none';
+        if (status) status.style.display = 'block';
+        if (status) status.innerHTML     = '<span style="color:#888">⏳ กำลังตรวจสอบ config...</span>';
         modal.style.display = 'flex';
+
+        // Check project config
+        fetch(checkUrl)
+            .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
+            .then(function (r) {
+                if (r.ok && r.data.configured) {
+                    // Config OK — show form
+                    if (status) status.style.display = 'none';
+                    if (form)   form.style.display   = 'block';
+                    confirm.disabled    = false;
+                    confirm.textContent = 'สร้าง Branch';
+                    updatePreview(bugId, slug);
+                } else {
+                    // Not configured
+                    var errMsg = (r.data && r.data.error) ? r.data.error : 'project นี้ยังไม่ได้ตั้งค่า';
+                    if (status) {
+                        status.innerHTML = ''
+                            + '<div style="padding:12px 0">'
+                            + '  <div style="font-size:20px;margin-bottom:8px">⚠️</div>'
+                            + '  <div style="font-weight:600;margin-bottom:6px">Project ยังไม่ได้ config</div>'
+                            + '  <div style="font-size:12px;color:#888;font-family:monospace;background:#f5f5f5;padding:8px;border-radius:4px">' + errMsg + '</div>'
+                            + '  <div style="font-size:12px;color:#666;margin-top:8px">กรุณาแจ้ง Admin เพื่อเพิ่ม mapping ใน <code>projects.json</code></div>'
+                            + '</div>';
+                    }
+                    confirm.style.display = 'none';
+                }
+            })
+            .catch(function () {
+                if (status) status.innerHTML = '❌ เชื่อมต่อ bridge ไม่ได้ กรุณาตรวจสอบ service';
+                confirm.disabled    = false;
+                confirm.textContent = 'สร้าง Branch';
+            });
     }
 
     function closeModal(bugId) {
@@ -139,8 +176,9 @@
         if (openBtn) {
             var bugId    = openBtn.dataset.bugId;
             var proxyUrl = openBtn.dataset.proxyUrl;
+            var checkUrl = openBtn.dataset.checkUrl;
             var slug     = openBtn.dataset.slug;
-            openModal(bugId, proxyUrl, slug);
+            openModal(bugId, proxyUrl, checkUrl, slug);
             return;
         }
 

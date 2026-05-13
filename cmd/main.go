@@ -46,6 +46,9 @@ func main() {
 	mux.Handle("POST /create-branch",
 		middleware.ValidateAPIToken(cfg.APIToken)(h.CreateBranch),
 	)
+	mux.Handle("GET /project-status",
+		middleware.ValidateAPIToken(cfg.APIToken)(h.ProjectStatus),
+	)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok","projects":` + itoa(len(projects)) + `}`))
