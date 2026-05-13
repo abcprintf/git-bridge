@@ -3,9 +3,11 @@
  * GitLabBridge — Admin Config Page
  * MantisBT Admin → Manage → Plugins → GitLab Bridge → Configure
  */
-access_ensure_global_level( ADMINISTRATOR );
+access_ensure_global_level( config_get( 'manage_plugin_threshold' ) );
 
 if ( 'POST' === $_SERVER['REQUEST_METHOD'] ) {
+    form_security_validate( 'plugin_GitLabBridge_config' );
+
     $bridge_url = gpc_get_string( 'bridge_url', '' );
     $api_token  = gpc_get_string( 'api_token', '' );
 
@@ -14,6 +16,7 @@ if ( 'POST' === $_SERVER['REQUEST_METHOD'] ) {
     } else {
         plugin_config_set( 'bridge_url', rtrim( $bridge_url, '/' ) );
         plugin_config_set( 'api_token',  $api_token );
+        form_security_purge( 'plugin_GitLabBridge_config' );
         $saved = true;
     }
 }
