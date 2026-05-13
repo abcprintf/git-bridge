@@ -14,6 +14,7 @@ class GitLabBridgePlugin extends MantisPlugin {
         $this->version     = '1.2.0';
         $this->requires    = ['MantisCore' => '2.0.0'];
         $this->author      = 'IGENCO';
+        $this->page        = 'config_page';
     }
 
     function config() {
@@ -320,7 +321,5 @@ class GitLabBridgePlugin extends MantisPlugin {
         return $s;
     }
 
-    function config_page() {
-        return 'config';
-    }
+    # config_page() ไม่จำเป็น — ใช้ $this->page = 'config_page' ใน register() แทน
 }
