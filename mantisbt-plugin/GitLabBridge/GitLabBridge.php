@@ -44,24 +44,49 @@ class GitLabBridgePlugin extends MantisPlugin {
         $slug         = $this->slugify( $summary );
         $default_name = $slug ? "issue/{$bug_id}-{$slug}" : "issue/{$bug_id}";
 
+        // Include external JS once per page (CSP 'self' allows src= scripts)
+        static $js_included = false;
+        if ( !$js_included ) {
+            $js_included = true;
+            echo '<script src="' . plugin_file( 'glb-modal.js' ) . '"></script>';
+        }
         ?>
+
+        <!-- Section header — match MantisBT style -->
+        <tr>
+            <td class="form-title" colspan="2">
+                <span style="display:flex;align-items:center;gap:6px">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="opacity:.85;flex-shrink:0">
+                        <path d="M15.698 7.287 8.712.302a1.03 1.03 0 0 0-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 0 1 1.55 1.56l1.773 1.774a1.224 1.224 0 0 1 1.267 2.025 1.226 1.226 0 0 1-2.002-1.334L8.58 5.963v4.353a1.226 1.226 0 1 1-1.008-.036V5.887a1.226 1.226 0 0 1-.666-1.608L5.093 2.44 .302 7.288a1.03 1.03 0 0 0 0 1.457l6.986 6.986a1.03 1.03 0 0 0 1.457 0l6.953-6.986a1.03 1.03 0 0 0 0-1.457"/>
+                    </svg>
+                    Git Branch
+                </span>
+            </td>
+        </tr>
+
+        <!-- Button row — ส่ง data ผ่าน data-* attrs (ไม่ต้องใช้ inline script) -->
         <tr>
             <td class="category"><?php echo plugin_lang_get( 'title' ) ?></td>
             <td>
-                <button id="glb-open-<?php echo $bug_id ?>" class="btn btn-sm btn-primary">
+                <button class="btn btn-sm btn-primary glb-open-btn"
+                        data-bug-id="<?php echo $bug_id ?>"
+                        data-proxy-url="<?php echo htmlspecialchars( $proxy_url, ENT_QUOTES ) ?>"
+                        data-slug="<?php echo htmlspecialchars( $slug, ENT_QUOTES ) ?>">
                     🔀 <?php echo plugin_lang_get( 'create_branch' ) ?>
                 </button>
             </td>
         </tr>
 
-        <!-- Modal — ไม่มี inline event handlers (CSP compliant) -->
+        <!-- Modal (hidden) — ข้อมูล bug อยู่ใน data attrs ของ button แล้ว -->
         <div id="glb-modal-<?php echo $bug_id ?>"
+             data-bug-id="<?php echo $bug_id ?>"
              style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
             <div style="background:#fff;border-radius:8px;padding:28px;width:520px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.2)">
 
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
                     <h3 style="margin:0;font-size:16px;font-weight:600">🔀 Create Git Branch</h3>
-                    <button id="glb-close-<?php echo $bug_id ?>"
+                    <button class="glb-close-btn"
+                            data-bug-id="<?php echo $bug_id ?>"
                             style="background:none;border:none;font-size:20px;cursor:pointer;color:#666;line-height:1">×</button>
                 </div>
 
@@ -75,7 +100,9 @@ class GitLabBridgePlugin extends MantisPlugin {
                     <div style="display:flex;gap:8px">
                         <?php foreach ( ['issue','feature','bugfix','hotfix'] as $type ): ?>
                         <label style="cursor:pointer">
-                            <input type="radio" name="glb-type-<?php echo $bug_id ?>"
+                            <input type="radio" class="glb-type-radio"
+                                   name="glb-type-<?php echo $bug_id ?>"
+                                   data-bug-id="<?php echo $bug_id ?>"
                                    value="<?php echo $type ?>"
                                    <?php echo $type === 'issue' ? 'checked' : '' ?>>
                             <code style="font-size:12px;padding:3px 8px;border-radius:4px;background:#f0f0f0"><?php echo $type ?>/</code>
@@ -97,8 +124,10 @@ class GitLabBridgePlugin extends MantisPlugin {
                 </div>
 
                 <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
-                    <button id="glb-cancel-<?php echo $bug_id ?>" class="btn btn-default btn-sm">ยกเลิก</button>
-                    <button id="glb-confirm-<?php echo $bug_id ?>" class="btn btn-primary btn-sm">สร้าง Branch</button>
+                    <button class="btn btn-default btn-sm glb-cancel-btn"
+                            data-bug-id="<?php echo $bug_id ?>">ยกเลิก</button>
+                    <button id="glb-confirm-<?php echo $bug_id ?>"
+                            class="btn btn-primary btn-sm">สร้าง Branch</button>
                 </div>
 
                 <!-- Result section -->
@@ -146,135 +175,6 @@ class GitLabBridgePlugin extends MantisPlugin {
 
             </div>
         </div>
-
-        <script>
-        (function() {
-            var PROXY_URL    = <?php echo json_encode( $proxy_url ) ?>;
-            var BUG_ID       = <?php echo $bug_id ?>;
-            var DEFAULT_SLUG = <?php echo json_encode( $slug ) ?>;
-            var manualEdit   = false;
-
-            var elModal    = document.getElementById('glb-modal-'      + BUG_ID);
-            var elName     = document.getElementById('glb-branchname-' + BUG_ID);
-            var elWarn     = document.getElementById('glb-name-warn-'  + BUG_ID);
-            var elConfirm  = document.getElementById('glb-confirm-'    + BUG_ID);
-            var elResult   = document.getElementById('glb-result-'     + BUG_ID);
-            var elMsg      = document.getElementById('glb-result-msg-' + BUG_ID);
-            var elCheckout = document.getElementById('glb-checkout-'   + BUG_ID);
-            var elCmd      = document.getElementById('glb-cmd-'        + BUG_ID);
-            var elCopy     = document.getElementById('glb-copy-'       + BUG_ID);
-            var elVSCode   = document.getElementById('glb-vscode-'     + BUG_ID);
-            var elGHD      = document.getElementById('glb-ghdesktop-'  + BUG_ID);
-            var elWeb      = document.getElementById('glb-webbranch-'  + BUG_ID);
-            var elNote     = document.getElementById('glb-ide-note-'   + BUG_ID);
-
-            function openModal() {
-                manualEdit = false;
-                elModal.style.display = 'flex';
-                elResult.style.display = 'none';
-                elConfirm.disabled = false;
-                elConfirm.textContent = 'สร้าง Branch';
-                updatePreview();
-            }
-
-            function closeModal() {
-                elModal.style.display = 'none';
-            }
-
-            function updatePreview() {
-                if (manualEdit) return;
-                var radios = document.querySelectorAll('input[name="glb-type-' + BUG_ID + '"]');
-                var type = 'issue';
-                radios.forEach(function(r) { if (r.checked) type = r.value; });
-                elName.value = DEFAULT_SLUG
-                    ? type + '/' + BUG_ID + '-' + DEFAULT_SLUG
-                    : type + '/' + BUG_ID;
-            }
-
-            function doCreate() {
-                var branchName = elName.value.trim();
-                if (!branchName) return;
-                elConfirm.disabled = true;
-                elConfirm.textContent = '⏳ Creating...';
-
-                fetch(PROXY_URL + '&branch_name=' + encodeURIComponent(branchName), { method: 'POST' })
-                .then(function(res) { return res.json().then(function(d) { return { ok: res.ok, data: d }; }); })
-                .then(function(r) {
-                    elResult.style.display = 'block';
-                    if (r.ok) {
-                        var created = r.data.status === 'created';
-                        elMsg.innerHTML = (created ? '✅' : '⚠️')
-                            + ' <strong>' + (created ? 'Branch สร้างเรียบร้อย' : 'Branch นี้มีอยู่แล้ว') + '</strong><br>'
-                            + '<code style="font-size:12px">' + r.data.branch_name + '</code>';
-                        elCheckout.style.display = 'block';
-                        elCmd.textContent = 'git fetch origin && git checkout ' + r.data.branch_name;
-                        elConfirm.textContent = created ? '✅ Done' : '✅ Already exists';
-                        setIDELinks(r.data.branch_name, r.data.repo_url, r.data.web_url);
-                    } else {
-                        elMsg.innerHTML = '❌ <strong>Error:</strong> ' + (r.data.error || 'unknown');
-                        elConfirm.disabled = false;
-                        elConfirm.textContent = 'สร้าง Branch';
-                    }
-                })
-                .catch(function(err) {
-                    elResult.style.display = 'block';
-                    elMsg.innerHTML = '❌ Network error: ' + err.message;
-                    elConfirm.disabled = false;
-                    elConfirm.textContent = 'สร้าง Branch';
-                });
-            }
-
-            function setIDELinks(branchName, repoUrl, webUrl) {
-                elVSCode.href = 'vscode://vscode.git/fetch';
-                elVSCode.addEventListener('click', function() {
-                    elNote.style.display = 'block';
-                    elNote.textContent = '💡 VS Code เปิดแล้ว — รัน "Git: Checkout to..." หรือใช้ command ด้านบนใน terminal';
-                });
-
-                if (repoUrl) {
-                    elGHD.href = 'x-github-client://openRepo?repoUrl=' + encodeURIComponent(repoUrl);
-                    elGHD.addEventListener('click', function() {
-                        elNote.style.display = 'block';
-                        elNote.textContent = '💡 GitHub Desktop เปิดแล้ว — เลือก branch "' + branchName + '" ในเมนู Branch';
-                    });
-                } else {
-                    elGHD.style.display = 'none';
-                }
-
-                if (webUrl) {
-                    elWeb.href = webUrl;
-                } else {
-                    elWeb.style.display = 'none';
-                }
-            }
-
-            // ─── Event listeners (CSP-safe, ไม่มี inline handlers) ───
-            document.getElementById('glb-open-'   + BUG_ID).addEventListener('click', openModal);
-            document.getElementById('glb-close-'  + BUG_ID).addEventListener('click', closeModal);
-            document.getElementById('glb-cancel-' + BUG_ID).addEventListener('click', closeModal);
-            elConfirm.addEventListener('click', doCreate);
-
-            elName.addEventListener('input', function() {
-                manualEdit = true;
-                elWarn.style.display = /[^\w\-\/\.]/.test(elName.value) ? 'block' : 'none';
-            });
-
-            document.querySelectorAll('input[name="glb-type-' + BUG_ID + '"]').forEach(function(r) {
-                r.addEventListener('change', updatePreview);
-            });
-
-            elCopy.addEventListener('click', function() {
-                navigator.clipboard.writeText(elCmd.textContent).then(function() {
-                    elCopy.textContent = '✅ Copied!';
-                    setTimeout(function() { elCopy.textContent = '📋 Copy'; }, 2000);
-                });
-            });
-
-            elModal.addEventListener('click', function(e) {
-                if (e.target === elModal) closeModal();
-            });
-        })();
-        </script>
         <?php
     }
 
