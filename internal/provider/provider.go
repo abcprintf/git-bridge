@@ -1,0 +1,18 @@
+package provider
+
+// Branch คือผลลัพธ์จากการสร้าง branch
+type Branch struct {
+	Name   string
+	WebURL string
+}
+
+// Provider คือ interface กลางสำหรับ Git hosting ทุกเจ้า
+// ปัจจุบัน implement: GitLab, GitHub
+type Provider interface {
+	// CreateBranch สร้าง branch ชื่อ branchName จาก base ref
+	// return (branch, alreadyExists, error)
+	CreateBranch(branchName, ref string) (*Branch, bool, error)
+
+	// Name คืนชื่อ provider สำหรับ logging
+	Name() string
+}
