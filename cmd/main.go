@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/abcprintf/git-bridge/internal/config"
+	"github.com/abcprintf/git-bridge/internal/factory"
 	"github.com/abcprintf/git-bridge/internal/handler"
 	"github.com/abcprintf/git-bridge/internal/middleware"
-	"github.com/abcprintf/git-bridge/internal/provider"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	log.Printf("[git-bridge] loaded %d project mapping(s) from %s", len(projects), cfg.ProjectsFile)
 
 	// สร้าง provider map
-	providers, err := provider.BuildProviderMap(projects)
+	providers, err := factory.BuildProviderMap(projects)
 	if err != nil {
 		log.Fatalf("[git-bridge] build providers: %v", err)
 	}
