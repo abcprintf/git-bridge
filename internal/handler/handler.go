@@ -161,6 +161,7 @@ func (h *Handler) doCreateBranch(w http.ResponseWriter, projectID, issueID int, 
 		"status":      "created",
 		"branch_name": branch.Name,
 		"web_url":     branch.WebURL,
+		"repo_url":    branch.RepoURL,
 		"provider":    p.Name(),
 	})
 }

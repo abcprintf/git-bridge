@@ -70,7 +70,10 @@ func (c *Client) CreateBranch(branchName, ref string) (*provider.Branch, bool, e
 	case http.StatusCreated:
 		var b glBranch
 		json.Unmarshal(respBody, &b)
-		return &provider.Branch{Name: b.Name, WebURL: b.WebURL}, false, nil
+		// GitLab WebURL: https://gitlab.igenco.dev/group/project/-/tree/branch
+		// RepoURL:       https://gitlab.igenco.dev/group/project
+		repoURL := repoURLFromGitLab(b.WebURL, b.Name)
+		return &provider.Branch{Name: b.Name, WebURL: b.WebURL, RepoURL: repoURL}, false, nil
 
 	case http.StatusBadRequest:
 		var glErr glError
@@ -90,4 +93,14 @@ func (c *Client) CreateBranch(branchName, ref string) (*provider.Branch, bool, e
 	default:
 		return nil, false, fmt.Errorf("gitlab %d: %s", resp.StatusCode, respBody)
 	}
+}
+
+// repoURLFromGitLab ตัด "/-/tree/<branch>" ออกจาก GitLab web URL
+// https://gitlab.igenco.dev/group/project/-/tree/issue/42 → https://gitlab.igenco.dev/group/project
+func repoURLFromGitLab(webURL, branchName string) string {
+	suffix := "/-/tree/" + branchName
+	if idx := strings.LastIndex(webURL, suffix); idx >= 0 {
+		return webURL[:idx]
+	}
+	return webURL
 }

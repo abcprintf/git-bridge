@@ -126,15 +126,15 @@ func (c *Client) createRef(branchName, sha string) (*provider.Branch, bool, erro
 
 	switch resp.StatusCode {
 	case http.StatusCreated:
-		webURL := fmt.Sprintf("https://github.com/%s/%s/tree/%s",
-			c.owner, c.repo, branchName,
-		)
-		// GitHub Enterprise: ใช้ base URL แทน
-		if !strings.Contains(c.baseURL, "api.github.com") {
+		var repoURL, webURL string
+		if strings.Contains(c.baseURL, "api.github.com") {
+			repoURL = fmt.Sprintf("https://github.com/%s/%s", c.owner, c.repo)
+		} else {
 			host := strings.Replace(c.baseURL, "/api/v3", "", 1)
-			webURL = fmt.Sprintf("%s/%s/%s/tree/%s", host, c.owner, c.repo, branchName)
+			repoURL = fmt.Sprintf("%s/%s/%s", host, c.owner, c.repo)
 		}
-		return &provider.Branch{Name: branchName, WebURL: webURL}, false, nil
+		webURL = repoURL + "/tree/" + branchName
+		return &provider.Branch{Name: branchName, WebURL: webURL, RepoURL: repoURL}, false, nil
 
 	case http.StatusUnprocessableEntity:
 		// 422 = branch already exists

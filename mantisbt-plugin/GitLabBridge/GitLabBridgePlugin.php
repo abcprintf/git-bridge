@@ -108,16 +108,52 @@ class GitLabBridgePlugin extends MantisPlugin {
                 <!-- Result section (hidden until after create) -->
                 <div id="glb-result-<?php echo $bug_id ?>" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid #eee">
                     <div id="glb-result-msg-<?php echo $bug_id ?>" style="margin-bottom:12px;font-size:13px"></div>
+
                     <div id="glb-checkout-<?php echo $bug_id ?>" style="display:none">
+                        <!-- Checkout command -->
                         <label style="display:block;font-size:12px;font-weight:600;color:#666;margin-bottom:4px">CHECKOUT COMMAND</label>
-                        <div style="display:flex;gap:6px">
+                        <div style="display:flex;gap:6px;margin-bottom:14px">
                             <code id="glb-cmd-<?php echo $bug_id ?>"
-                                  style="flex:1;background:#f5f5f5;padding:8px 10px;border-radius:4px;font-size:12px;display:block"></code>
+                                  style="flex:1;background:#f5f5f5;padding:8px 10px;border-radius:4px;font-size:12px;display:block;word-break:break-all"></code>
                             <button onclick="glbCopy(<?php echo $bug_id ?>)"
                                     id="glb-copy-<?php echo $bug_id ?>"
                                     class="btn btn-default btn-xs"
-                                    style="white-space:nowrap">📋 Copy</button>
+                                    style="white-space:nowrap;align-self:flex-start">📋 Copy</button>
                         </div>
+
+                        <!-- Open in IDE buttons -->
+                        <label style="display:block;font-size:12px;font-weight:600;color:#666;margin-bottom:8px">OPEN IN</label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <a id="glb-vscode-<?php echo $bug_id ?>"
+                               href="#"
+                               onclick="glbOpenVSCode(<?php echo $bug_id ?>);return false;"
+                               class="btn btn-default btn-sm"
+                               style="display:flex;align-items:center;gap:6px;text-decoration:none">
+                                <svg width="14" height="14" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M74.5 5.5L37.5 40.5L16.5 24.5L5.5 29.5V70.5L16.5 75.5L37.5 59.5L74.5 94.5L94.5 84.5V15.5L74.5 5.5Z" fill="#007ACC"/>
+                                </svg>
+                                VS Code
+                            </a>
+                            <a id="glb-ghdesktop-<?php echo $bug_id ?>"
+                               href="#"
+                               onclick="glbOpenGHDesktop(<?php echo $bug_id ?>);return false;"
+                               class="btn btn-default btn-sm"
+                               style="display:flex;align-items:center;gap:6px;text-decoration:none">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="#6e40c9" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                                </svg>
+                                GitHub Desktop
+                            </a>
+                            <a id="glb-webbranch-<?php echo $bug_id ?>"
+                               href="#"
+                               target="_blank"
+                               class="btn btn-default btn-sm"
+                               style="display:flex;align-items:center;gap:6px;text-decoration:none">
+                                🌐 Open Branch
+                            </a>
+                        </div>
+                        <p id="glb-ide-note-<?php echo $bug_id ?>"
+                           style="display:none;margin-top:8px;font-size:11px;color:#888;margin-bottom:0"></p>
                     </div>
                 </div>
 
@@ -185,15 +221,15 @@ class GitLabBridgePlugin extends MantisPlugin {
                         var created = r.data.status === 'created';
                         var icon    = created ? '✅' : '⚠️';
                         var label   = created ? 'Branch สร้างเรียบร้อย' : 'Branch นี้มีอยู่แล้ว';
-                        var link    = r.data.web_url
-                            ? ' <a href="' + r.data.web_url + '" target="_blank" style="font-size:12px">ดูบน Git ↗</a>'
-                            : '';
                         msgEl.innerHTML = icon + ' <strong>' + label + '</strong><br>'
-                            + '<code style="font-size:12px">' + r.data.branch_name + '</code>' + link;
+                            + '<code style="font-size:12px">' + r.data.branch_name + '</code>';
 
                         checkoutEl.style.display = 'block';
                         cmdEl.textContent = 'git fetch origin && git checkout ' + r.data.branch_name;
                         btn.textContent   = created ? '✅ Done' : '✅ Already exists';
+
+                        // เซ็ต IDE deep links
+                        glbSetIDELinks(id, r.data.branch_name, r.data.repo_url, r.data.web_url, r.data.provider);
                     } else {
                         msgEl.innerHTML = '❌ <strong>Error:</strong> ' + (r.data.error || 'unknown');
                         btn.disabled    = false;
@@ -217,6 +253,51 @@ class GitLabBridgePlugin extends MantisPlugin {
                     setTimeout(function() { btn.textContent = '📋 Copy'; }, 2000);
                 });
             };
+
+            // เซ็ต deep link ให้ปุ่ม IDE หลัง branch สร้างสำเร็จ
+            window.glbSetIDELinks = function(id, branchName, repoUrl, webUrl, provider) {
+                if (id !== BUG_ID) return;
+
+                // ─── VS Code ───────────────────────────────────────────
+                // vscode://vscode.git/fetch เปิด VS Code source control panel
+                // แล้วแสดง note ให้ checkout ด้วย command ข้างบน
+                var vsBtn = document.getElementById('glb-vscode-' + id);
+                var note  = document.getElementById('glb-ide-note-' + id);
+                vsBtn.href = 'vscode://vscode.git/fetch';
+                vsBtn.removeAttribute('onclick');
+                vsBtn.onclick = function() {
+                    note.style.display = 'block';
+                    note.textContent   = '💡 VS Code เปิดแล้ว — รัน "Git: Checkout to..." หรือใช้ command ด้านบนใน terminal';
+                    return true; // เปิด deep link ต่อ
+                };
+
+                // ─── GitHub Desktop ────────────────────────────────────
+                // x-github-client://openRepo?repoUrl=<https_url>
+                // เปิด GitHub Desktop และไปที่ repo นั้น
+                var ghBtn = document.getElementById('glb-ghdesktop-' + id);
+                if (repoUrl) {
+                    ghBtn.href = 'x-github-client://openRepo?repoUrl=' + encodeURIComponent(repoUrl);
+                    ghBtn.removeAttribute('onclick');
+                    ghBtn.onclick = function() {
+                        note.style.display = 'block';
+                        note.textContent   = '💡 GitHub Desktop เปิดแล้ว — เลือก branch "' + branchName + '" ในเมนู Branch';
+                        return true;
+                    };
+                } else {
+                    ghBtn.style.display = 'none';
+                }
+
+                // ─── Open Branch in browser ────────────────────────────
+                var webBtn = document.getElementById('glb-webbranch-' + id);
+                if (webUrl) {
+                    webBtn.href = webUrl;
+                } else {
+                    webBtn.style.display = 'none';
+                }
+            };
+
+            window.glbOpenVSCode    = function() {}; // placeholder
+            window.glbOpenGHDesktop = function() {}; // placeholder
 
             // Close modal เมื่อ click outside
             document.getElementById('glb-modal-' + BUG_ID).addEventListener('click', function(e) {
