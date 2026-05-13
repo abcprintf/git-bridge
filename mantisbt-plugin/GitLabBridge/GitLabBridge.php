@@ -321,6 +321,6 @@ class GitLabBridgePlugin extends MantisPlugin {
     }
 
     function config_page() {
-        return 'config_page.php';
+        return 'config_page';
     }
 }
