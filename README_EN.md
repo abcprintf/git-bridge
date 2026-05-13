@@ -1,19 +1,19 @@
 # git-bridge
 
-[English](README_EN.md) | **ภาษาไทย**
+**English** | [ภาษาไทย](README.md)
 
 Go microservice — MantisBT → GitLab / GitHub  
-สร้าง branch จาก MantisBT issue โดยอัตโนมัติ รองรับหลาย project และหลาย provider
+Automatically creates branches from MantisBT issues. Supports multiple projects and multiple Git providers.
 
 ---
 
 ## Features
 
-- **Manual (Button)** — กดปุ่ม "Create Branch" ใน MantisBT issue view เลือก branch type / แก้ชื่อ / copy checkout command ได้เลย
-- **Auto (Webhook)** — สร้าง branch อัตโนมัติเมื่อ issue เปลี่ยน status (เช่น assigned, in progress)
-- **Multi-project** — แต่ละ MantisBT project map ไปยัง Git repo คนละตัวได้ ใช้ GitLab หรือ GitHub ผสมกันได้
-- **CSP-safe** — PHP plugin ผ่าน MantisBT Content Security Policy โดยไม่ต้อง `unsafe-inline`
-- **Token ไม่โผล่ browser** — PHP plugin เป็น server-side proxy เท่านั้น
+- **Manual (Button)** — "Create Branch" button on the MantisBT issue view. Select branch type, edit the name, and copy the checkout command directly.
+- **Auto (Webhook)** — Creates a branch automatically when an issue changes status (e.g. `assigned`, `in progress`).
+- **Multi-project** — Each MantisBT project maps to a separate Git repository. Mix GitLab and GitHub in the same deployment.
+- **CSP-safe** — PHP plugin passes MantisBT's Content Security Policy without `unsafe-inline`.
+- **Token never exposed** — The PHP plugin acts as a server-side proxy only. Tokens are never sent to the browser.
 
 ---
 
@@ -22,8 +22,8 @@ Go microservice — MantisBT → GitLab / GitHub
 | Provider | Auth |
 |----------|------|
 | GitLab Self-hosted / Cloud | Project Access Token (`api` scope) |
-| GitHub Cloud | Fine-grained PAT หรือ Classic PAT |
-| GitHub Enterprise Server | Fine-grained PAT หรือ Classic PAT |
+| GitHub Cloud | Fine-grained PAT or Classic PAT |
+| GitHub Enterprise Server | Fine-grained PAT or Classic PAT |
 
 ---
 
@@ -31,7 +31,7 @@ Go microservice — MantisBT → GitLab / GitHub
 
 ```
 MantisBT Issue
-  ├── กดปุ่ม (manual) ───→ plugin.php (PHP proxy) ──→ POST /create-branch ──┐
+  ├── Button (manual) ───→ plugin.php (PHP proxy) ──→ POST /create-branch ──┐
   └── Webhook (auto)  ───→                            POST /mantis-webhook ──┤
                                                                               ↓
                                                                      git-bridge (Go)
@@ -47,7 +47,7 @@ MantisBT Issue
 
 ## Quick Start
 
-### 1. Clone และ config
+### 1. Clone and configure
 
 ```bash
 git clone https://github.com/abcprintf/git-bridge.git
@@ -56,15 +56,15 @@ cp .env.example .env
 cp projects.example.json projects.json
 ```
 
-### 2. แก้ `.env`
+### 2. Edit `.env`
 
 ```bash
 nano .env
 ```
 
-### 3. แก้ `projects.json`
+### 3. Edit `projects.json`
 
-เพิ่ม mapping MantisBT project → Git repo (ดู [Projects Config](#projects-config) ด้านล่าง)
+Add your MantisBT project → Git repo mappings. See [Projects Config](#projects-config) below.
 
 ### 4. Deploy
 
@@ -82,13 +82,13 @@ curl https://bridge.example.com/health
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `PORT` | No | `8080` | Port ที่ service listen |
-| `WEBHOOK_SECRET` | **Yes** | — | HMAC secret สำหรับ MantisBT webhook (`X-Hub-Signature-256`) |
-| `API_TOKEN` | **Yes** | — | Token สำหรับ PHP plugin (`X-Api-Token`) |
-| `PROJECTS_FILE` | No | `/etc/git-bridge/projects.json` | Path ของ projects.json |
-| `TRIGGER_STATUSES` | No | `assigned,in progress` | Status ที่ trigger auto branch (webhook) |
+| `PORT` | No | `8080` | Port the service listens on |
+| `WEBHOOK_SECRET` | **Yes** | — | HMAC secret for MantisBT webhook (`X-Hub-Signature-256`) |
+| `API_TOKEN` | **Yes** | — | Token for the PHP plugin (`X-Api-Token`) |
+| `PROJECTS_FILE` | No | `/etc/git-bridge/projects.json` | Path to projects.json |
+| `TRIGGER_STATUSES` | No | `assigned,in progress` | Issue statuses that trigger auto branch creation |
 
-ตัวอย่าง `.env`:
+Example `.env`:
 
 ```env
 PORT=8080
@@ -98,18 +98,18 @@ PROJECTS_FILE=/etc/git-bridge/projects.json
 TRIGGER_STATUSES=assigned,in progress
 ```
 
-> สร้าง random secret: `openssl rand -hex 32`
+> Generate a random secret: `openssl rand -hex 32`
 
 ---
 
 ## Projects Config (`projects.json`)
 
-ไฟล์นี้ map MantisBT project ID → Git repo  
-อยู่ใน `.gitignore` **ห้าม commit** เพราะมี token
+This file maps MantisBT project IDs to Git repositories.  
+It is listed in `.gitignore` — **do not commit** it, as it contains tokens.
 
-### หา MantisBT Project ID
+### Finding Your MantisBT Project ID
 
-ไปที่ **Manage → Projects** ใน MantisBT — ID แสดงใน URL เช่น `manage_proj_edit_page.php?project_id=21`
+Go to **Manage → Projects** in MantisBT — the ID appears in the URL, e.g. `manage_proj_edit_page.php?project_id=21`.
 
 ### Format
 
@@ -120,7 +120,7 @@ TRIGGER_STATUSES=assigned,in progress
 ]
 ```
 
-> `gitlab_project_id` ต้องเป็น **string** (ใส่ `"` ครอบ) ไม่ใช่ number
+> `gitlab_project_id` must be a **string** (quoted with `"`) — not a number.
 
 ---
 
@@ -137,12 +137,12 @@ TRIGGER_STATUSES=assigned,in progress
 }
 ```
 
-**หา `gitlab_project_id`:**  
-เข้า GitLab project → **Settings → General** → Project ID  
-หรือ: `https://gitlab.example.com/api/v4/projects?search=<repo-name>`
+**Finding `gitlab_project_id`:**  
+GitLab project → **Settings → General** → Project ID  
+Or: `https://gitlab.example.com/api/v4/projects?search=<repo-name>`
 
-**Token ที่ต้องการ:**  
-GitLab project → **Settings → Access Tokens** → สร้าง token ด้วย Role **Developer** และ Scope **`api`**
+**Required token:**  
+GitLab project → **Settings → Access Tokens** → create a token with Role **Developer** and Scope **`api`**
 
 ---
 
@@ -159,7 +159,7 @@ GitLab project → **Settings → Access Tokens** → สร้าง token ด�
 }
 ```
 
-**Token ที่ต้องการ:**  
+**Required token:**  
 GitHub → **Settings → Developer settings → Fine-grained tokens**  
 Permissions: **Contents → Read and write**
 
@@ -179,11 +179,11 @@ Permissions: **Contents → Read and write**
 }
 ```
 
-> ถ้าไม่ระบุ `github_api_url` จะใช้ `https://api.github.com` (GitHub Cloud)
+> If `github_api_url` is omitted, defaults to `https://api.github.com` (GitHub Cloud).
 
 ---
 
-### ตัวอย่างหลาย project ผสม provider
+### Multi-provider Example
 
 ```json
 [
@@ -214,7 +214,7 @@ Permissions: **Contents → Read and write**
 ]
 ```
 
-หลัง update `projects.json` ต้อง restart service:
+After updating `projects.json`, restart the service:
 
 ```bash
 docker compose restart git-bridge
@@ -232,18 +232,18 @@ docker logs git-bridge --tail 10
 | Provider | Token Type | Required Permission |
 |----------|-----------|---------------------|
 | GitLab | Project Access Token | Role: **Developer**, Scope: **`api`** |
-| GitLab | Personal Access Token | Scope: **`api`**, ต้องมี Developer role ใน project |
+| GitLab | Personal Access Token | Scope: **`api`**, must have Developer role in project |
 | GitHub Cloud | Fine-grained PAT | **Contents: Read and write** |
 | GitHub Cloud | Classic PAT | **`repo`** |
 | GitHub Enterprise | Fine-grained PAT | **Contents: Read and write** |
 
-> ⚠️ GitLab: Guest/Reporter role ทำให้ได้ 403 ตอนสร้าง branch — ต้องเป็น **Developer ขึ้นไป**
+> ⚠️ GitLab: Guest/Reporter role returns 403 when creating branches — **Developer or above is required**.
 
 ---
 
 ## MantisBT Plugin Setup
 
-### ติดตั้ง
+### Installation
 
 ```bash
 cp -r mantisbt-plugin/GitLabBridge /path/to/mantisbt/plugins/
@@ -251,26 +251,26 @@ cp -r mantisbt-plugin/GitLabBridge /path/to/mantisbt/plugins/
 
 MantisBT Admin → **Manage → Plugins → Install "GitLab Bridge"**
 
-### Config Plugin
+### Plugin Configuration
 
 Admin → **Plugins → GitLab Bridge → Configure**
 
 | Field | Value |
 |-------|-------|
-| Bridge URL | URL ที่ MantisBT server เข้าถึง git-bridge ได้ เช่น `https://bridge.example.com` |
-| API Token | ค่าเดียวกับ `API_TOKEN` ใน `.env` |
+| Bridge URL | URL that the MantisBT **server** can reach git-bridge, e.g. `https://bridge.example.com` |
+| API Token | Same value as `API_TOKEN` in `.env` |
 
-> **สำคัญ**: Bridge URL ต้องเป็น URL ที่ **MantisBT server** (ไม่ใช่ browser) เข้าถึงได้  
-> ถ้า MantisBT และ git-bridge อยู่คนละเครื่อง ให้ใช้ internal hostname หรือ IP
+> **Important**: Bridge URL must be reachable from the **MantisBT server** (not the browser).  
+> If MantisBT and git-bridge are on different machines, use an internal hostname or IP.
 
-### Webhook (Auto branch)
+### Webhook (Auto Branch)
 
 MantisBT Admin → **Manage → Webhooks → Add Webhook**
 
 ```
 URL:    https://bridge.example.com/mantis-webhook
 Events: issue_updated, issue_assigned
-Secret: <ค่าเดียวกับ WEBHOOK_SECRET ใน .env>
+Secret: <same value as WEBHOOK_SECRET in .env>
 ```
 
 ---
@@ -279,7 +279,7 @@ Secret: <ค่าเดียวกับ WEBHOOK_SECRET ใน .env>
 
 ### `GET /health`
 
-ตรวจสอบว่า service ทำงานปกติ ไม่ต้อง auth
+Check that the service is running. No authentication required.
 
 ```bash
 curl https://bridge.example.com/health
@@ -288,22 +288,22 @@ curl https://bridge.example.com/health
 
 ### `GET /project-status?mantis_project_id=<id>`
 
-ตรวจสอบว่า MantisBT project ถูก map ใน `projects.json` หรือไม่  
+Check whether a MantisBT project is mapped in `projects.json`.  
 Header: `X-Api-Token: <API_TOKEN>`
 
 ```bash
-# project มี config
+# Project has config
 curl -H "X-Api-Token: xxx" "https://bridge.example.com/project-status?mantis_project_id=21"
 # {"configured":true,"project_id":21,"provider":"gitlab"}
 
-# project ไม่มี config
+# Project has no config
 # HTTP 404
 # {"configured":false,"error":"mantis project_id=99 is not mapped to any git repo"}
 ```
 
 ### `POST /create-branch`
 
-สร้าง branch (เรียกจาก PHP plugin)  
+Create a branch (called from the PHP plugin).  
 Header: `X-Api-Token: <API_TOKEN>`
 
 ```json
@@ -326,7 +326,7 @@ Response `201 Created`:
 }
 ```
 
-Response `200 OK` (branch มีอยู่แล้ว):
+Response `200 OK` (branch already exists):
 ```json
 {
   "status": "already_exists",
@@ -337,7 +337,7 @@ Response `200 OK` (branch มีอยู่แล้ว):
 
 ### `POST /mantis-webhook`
 
-รับ MantisBT webhook event (สร้าง branch อัตโนมัติ)  
+Receive a MantisBT webhook event and create a branch automatically.  
 Header: `X-Hub-Signature-256: sha256=<hmac>`
 
 ---
@@ -347,12 +347,12 @@ Header: `X-Hub-Signature-256: sha256=<hmac>`
 ```
 issue/42-fix-login-error-on-mobile
 issue/100-auth-session-timeout
-issue/7                           ← ถ้า summary ว่างหรือ slugify แล้วเป็น empty
+issue/7                             ← when summary is empty or slugifies to empty
 ```
 
-Branch type (เลือกได้ใน modal):
+Branch type (selectable in the modal):
 
-| Type | ตัวอย่าง |
+| Type | Example |
 |------|---------|
 | `issue/` | `issue/42-fix-login` |
 | `feature/` | `feature/42-new-dashboard` |
@@ -363,11 +363,11 @@ Branch type (เลือกได้ใน modal):
 
 ## Security
 
-- **Webhook**: HMAC-SHA256 (`X-Hub-Signature-256`) — reject ถ้า signature ไม่ตรง
-- **Button API**: constant-time token compare (`X-Api-Token`) — ป้องกัน timing attack
-- **Token ไม่โผล่ browser**: PHP plugin ส่ง request server-side เท่านั้น
-- **CSP compliant**: JavaScript ใช้ external file + event delegation ไม่มี inline script/handler
-- **`projects.json`**: อยู่นอก git repository, mount เข้า container ผ่าน volume
+- **Webhook**: HMAC-SHA256 (`X-Hub-Signature-256`) — requests with invalid signatures are rejected
+- **Button API**: Constant-time token comparison (`X-Api-Token`) — prevents timing attacks
+- **Token never in browser**: PHP plugin forwards requests server-side only
+- **CSP compliant**: JavaScript is served as an external file with event delegation — no inline scripts or handlers
+- **`projects.json`**: Kept outside the Git repository, mounted into the container via Docker volume
 
 ---
 
@@ -378,10 +378,10 @@ git-bridge/
 ├── cmd/main.go                          ← entry point, routes
 ├── internal/
 │   ├── config/
-│   │   ├── config.go                   ← โหลด env vars
-│   │   └── projects.go                 ← โหลด projects.json
+│   │   ├── config.go                   ← load env vars
+│   │   └── projects.go                 ← load projects.json
 │   ├── factory/
-│   │   └── factory.go                  ← สร้าง provider จาก config
+│   │   └── factory.go                  ← build provider from config
 │   ├── handler/
 │   │   └── handler.go                  ← webhook + button + project-status handlers
 │   ├── middleware/
@@ -407,36 +407,36 @@ git-bridge/
 ├── go.mod
 ├── .env.example                       ← template (safe to commit)
 ├── .gitignore
-└── projects.example.json              ← template ทุก provider (safe to commit)
+└── projects.example.json              ← template for all providers (safe to commit)
 ```
 
 ---
 
 ## Troubleshooting
 
-### Bridge ไม่ตอบสนอง (502)
+### Bridge not responding (502)
 
 ```bash
-docker ps | grep git-bridge          # ตรวจว่า container running
-docker logs git-bridge --tail 30     # ดู error
-curl http://localhost:8011/health    # test จาก host
+docker ps | grep git-bridge          # check container is running
+docker logs git-bridge --tail 30     # inspect errors
+curl http://localhost:8011/health    # test from host
 ```
 
 ### `project_id=X is not mapped` (422)
 
 ```bash
-cat /etc/git-bridge/projects.json    # ตรวจ mantis_project_id
+cat /etc/git-bridge/projects.json    # verify mantis_project_id
 docker compose restart git-bridge    # reload config
 ```
 
 ### GitLab 403 Forbidden
 
-- Token scope ต้องเป็น **`api`** ไม่ใช่ `read_api`
-- User เจ้าของ token ต้องมี role **Developer** ขึ้นไปใน project
+- Token scope must be **`api`**, not `read_api`
+- Token owner must have **Developer** role or above in the project
 
 ### `cannot unmarshal number into... type string`
 
-`gitlab_project_id` ต้องเป็น string:
+`gitlab_project_id` must be a string:
 ```json
 "gitlab_project_id": "123"    ✅
 "gitlab_project_id": 123      ❌
@@ -444,4 +444,10 @@ docker compose restart git-bridge    # reload config
 
 ### Plugin page 404
 
-Deactivate และ Activate plugin ใหม่ใน MantisBT Admin → Manage Plugins
+Deactivate and re-activate the plugin in MantisBT Admin → Manage Plugins.
+
+---
+
+## License
+
+MIT
