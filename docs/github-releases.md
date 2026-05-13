@@ -1,5 +1,13 @@
 # GitHub Releases — Draft Copy
 
+## v1.2.2 — 2026-05-13
+
+
+
+[View Release](https://github.com/abcprintf/git-bridge/releases/tag/v1.2.2)
+
+---
+
 วาง markdown ด้านล่างใน GitHub → Releases → "Create a new release"
 แยกแต่ละ version ด้วย `---`
 
